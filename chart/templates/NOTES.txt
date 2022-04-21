@@ -1,0 +1,95 @@
+1. Check if service is OK:
+  kubectl get pod --namespace {{ .Release.Namespace }} -l app=goldpinger
+
+2. Get the application URL by running these commands:
+{{- if contains "NodePort" .Values.service.type }}
+  export NODE_PORT=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ include "goldpinger.fullname" . }})
+  export NODE_IP=$(kubectl get nodes --namespace {{ .Release.Namespace }} -o jsonpath="{.items[0].status.addresses[0].address}")
+  echo http://$NODE_IP:$NODE_PORT
+{{- else if contains "LoadBalancer" .Values.service.type }}
+     NOTE: It may take a few minutes for the LoadBalancer IP to be available.
+           You can watch the status of by running 'kubectl get --namespace {{ .Release.Namespace }} svc -w {{ include "goldpinger.fullname" . }}'
+  export SERVICE_IP=$(kubectl get svc --namespace {{ .Release.Namespace }} {{ include "goldpinger.fullname" . }} --template "{{"{{ range (index .status.loadBalancer.ingress 0) }}{{.}}{{ end }}"}}")
+  echo http://$SERVICE_IP:{{ .Values.service.port }}
+{{- else if contains "ClusterIP" .Values.service.type }}
+  export POD_NAME=$(kubectl get pods --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/name={{ include "goldpinger.name" . }},app.kubernetes.io/instance={{ .Release.Name }}" -o jsonpath="{.items[0].metadata.name}")
+  export CONTAINER_PORT=$(kubectl get pod --namespace {{ .Release.Namespace }} $POD_NAME -o jsonpath="{.spec.containers[0].ports[0].containerPort}")
+  echo "Visit http://127.0.0.1:8080 to use your application"
+  kubectl --namespace {{ .Release.Namespace }} port-forward $POD_NAME 8080:$CONTAINER_PORT
+{{- end }}
+
+{{ if .Values.serviceMonitor.create }}
+3. Deploy grafana dashboard and configure ServiceMonitor
+You can find latest goldpinger dashboard [here](https://raw.githubusercontent.com/bloomberg/goldpinger/master/extras/goldpinger-dashboard.json),
+add dashboard to you grafana.
+
+ServiceMonitor has been configured.
+```
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "goldpinger.fullname" . }}
+  namespace: monitoring
+spec:
+  endpoints:
+  - interval: 30s
+    port: http
+    path: /metrics
+  namespaceSelector:
+    matchNames:
+    - {{ .Release.Namespace }}
+  selector:
+    matchLabels:
+      app: {{ include "goldpinger.fullname" . }}
+```
+
+{{ if .Values.prometheusRule.create }}
+4. Configure AlertManager
+PrometheusRule has been configured.
+```
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  labels:
+    app: {{ include "goldpinger.fullname" . }}
+  name: {{ include "goldpinger.fullname" . }}-rules
+  namespace: monitoring
+spec:
+  groups:
+  - name: goldpinger-alerts
+    rules:
+    - alert: goldpinger_nodes_unhealthy
+      expr: sum(goldpinger_nodes_health_total{status="unhealthy"})
+        BY (instance, goldpinger_instance) > 0
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        description: |
+          Goldpinger instance {{ printf "{{ $labels.goldpinger_instance }}" }} has been reporting unhealthy nodes for at least 5 minutes.
+        summary: Instance {{ printf "{{ $labels.instance }}" }} down
+
+    - alert: goldpinger_peer_response_p99
+      expr: histogram_quantile(0.99, sum(rate(goldpinger_peers_response_time_s_bucket[30m]))
+        by (goldpinger_instance, instance, le)) > 0.05
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        description: |
+          Goldpinger instance {{ printf "{{ $labels.goldpinger_instance }} {{ $labels.instance }}" }} peer response p99 > 500ms
+        summary: Instance {{ printf "{{ $labels.goldpinger_instance }}" }} response p99 > 500ms
+
+    - alert: goldpinger_kube_master_response_p99
+      expr: histogram_quantile(0.99, sum(rate(goldpinger_kube_master_response_time_s_bucket[30m]))
+        by (goldpinger_instance, instance, le)) > 1
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        description: |
+          Goldpinger instance {{ printf "{{ $labels.goldpinger_instance }} {{ $labels.instance }}" }} request kubernetes master response p99 > 1s
+        summary: Instance {{ printf "{{ $labels.goldpinger_instance }}" }} request kubernetes master response p99 > 1s
+```
+{{- end }}
+{{- end }}

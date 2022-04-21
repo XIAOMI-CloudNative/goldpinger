@@ -1,0 +1,53 @@
+{{- if .Values.serviceMonitor.create -}}
+{{- if .Values.prometheusRule.create -}}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ include "goldpinger.prometheusRuleName" . }}
+  labels:
+    {{- include "goldpinger.labels" . | nindent 4 }}
+  namespace: monitoring
+  {{- with .Values.serviceAccount.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  groups:
+  - name: goldpinger-alerts
+    rules:
+    - alert: goldpinger_nodes_unhealthy
+      expr: sum(goldpinger_nodes_health_total{status="unhealthy"})
+        BY (instance, goldpinger_instance) > 0
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        description: |
+          Goldpinger instance {{ printf "{{ $labels.goldpinger_instance }}" }} has been reporting unhealthy nodes for at least 5 minutes.
+        summary: Instance {{ printf "{{ $labels.instance }}" }} down
+
+    - alert: goldpinger_peer_response_p99
+      expr: histogram_quantile(0.99, sum(rate(goldpinger_peers_response_time_s_bucket[30m]))
+        by (goldpinger_instance, instance, le)) > 0.5
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        description: |
+          Goldpinger instance {{ printf "{{ $labels.goldpinger_instance }} {{ $labels.instance }}" }} peer response p99 > 500ms
+        summary: Instance {{ printf "{{ $labels.goldpinger_instance }}" }} response p99 > 500ms
+
+    - alert: goldpinger_kube_master_response_p99
+      expr: histogram_quantile(0.99, sum(rate(goldpinger_kube_master_response_time_s_bucket[30m]))
+        by (goldpinger_instance, instance, le)) > 1
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        description: |
+          Goldpinger instance {{ printf "{{ $labels.goldpinger_instance }} {{ $labels.instance }}" }} request kubernetes master response p99 > 1s
+        summary: Instance {{ printf "{{ $labels.goldpinger_instance }}" }} request kubernetes master response p99 > 1s
+{{- end }}
+{{- end }}
+
+
