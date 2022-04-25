@@ -38,6 +38,29 @@ prometheusRule:
   # The name of the service account to use.
   # If not set and create is true, a name is generated using the fullname template
   name: ""
+  rules:
+    - alert: goldpinger_peer_response_p99
+      expr: histogram_quantile(0.99, sum(rate(goldpinger_peers_response_time_s_bucket[30m]))
+        by (goldpinger_instance, instance, le)) > 0.5
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        description: |
+          Goldpinger instance {{ printf "{{ $labels.goldpinger_instance }} {{ $labels.instance }}" }} peer response p99 > 500ms
+        summary: Instance {{ printf "{{ $labels.goldpinger_instance }}" }} response p99 > 500ms
+
+    - alert: goldpinger_kube_master_response_p99
+      expr: histogram_quantile(0.99, sum(rate(goldpinger_kube_master_response_time_s_bucket[30m]))
+        by (goldpinger_instance, instance, le)) > 1
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        description: |
+          Goldpinger instance {{ printf "{{ $labels.goldpinger_instance }} {{ $labels.instance }}" }} request kubernetes master response p99 > 1s
+        summary: Instance {{ printf "{{ $labels.goldpinger_instance }}" }} request kubernetes master response p99 > 1s
+
 
 podAnnotations: {}
 
