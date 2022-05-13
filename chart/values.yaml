@@ -47,8 +47,8 @@ prometheusRule:
         severity: warning
       annotations:
         description: |
-          Goldpinger instance {{ printf "{{ $labels.goldpinger_instance }} {{ $labels.instance }}" }} peer response p99 > 500ms
-        summary: Instance {{ printf "{{ $labels.goldpinger_instance }}" }} response p99 > 500ms
+          Goldpinger instance {{ $labels.goldpinger_instance }} {{ $labels.instance }} peer response p99 > 500ms
+        summary: Instance {{ $labels.goldpinger_instance }} response p99 > 500ms
 
 podAnnotations: {}
 
