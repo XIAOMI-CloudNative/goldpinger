@@ -91,6 +91,8 @@ tolerations:
   - key: node-role.kubernetes.io/master
     effect: NoSchedule
 
+priorityClassName: system-node-critical
+
 ## Install Default RBAC roles and bindings
 rbac:
   # Specifies whether RBAC resources should be created
