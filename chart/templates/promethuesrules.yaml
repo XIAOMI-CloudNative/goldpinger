@@ -1,0 +1,21 @@
+{{- if .Capabilities.APIVersions.Has "monitoring.coreos.com/v1" -}}
+{{- if .Values.serviceMonitor.create -}}
+{{- if .Values.prometheusRule.create -}}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ include "goldpinger.prometheusRuleName" . }}
+  labels:
+    {{- include "goldpinger.labels" . | nindent 4 }}
+  namespace: monitoring
+  {{- with .Values.serviceAccount.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  groups:
+  - name: goldpinger-alerts
+    rules: {{- toYaml .Values.prometheusRule.rules | nindent 4 }}
+{{- end -}}
+{{- end -}}
+{{- end -}}

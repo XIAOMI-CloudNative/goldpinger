@@ -1,0 +1,28 @@
+{{- if .Capabilities.APIVersions.Has "monitoring.coreos.com/v1" -}}
+{{- if .Values.serviceMonitor.create -}}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "goldpinger.serviceMonitorName" . }}
+  namespace: monitoring
+  labels:
+    {{- include "goldpinger.labels" . | nindent 4 }}
+  {{- with .Values.serviceAccount.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  endpoints:
+  - interval: 30s
+    port: http
+    path: /metrics
+  namespaceSelector:
+    matchNames:
+    - {{ .Release.Namespace }}
+  selector:
+    matchLabels:
+      {{- include "goldpinger.envSelectorLabels" . | nindent 6 }}
+{{- end -}}
+{{- end -}}
+
+

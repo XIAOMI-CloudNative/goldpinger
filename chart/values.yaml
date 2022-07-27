@@ -1,0 +1,101 @@
+# Default values for goldpinger.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+image:
+  repository: micr.cloud.mioffice.cn/dockerhub/bloomberg/goldpinger
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: ""
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+serviceMonitor:
+  # Specifies whether a service monitor should be created
+  create: false
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+prometheusRule:
+  # Specifies whether a prometheus alert should be created
+  create: false
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+  rules:
+    - alert: goldpinger_peer_response_p99
+      expr: histogram_quantile(0.99, sum(rate(goldpinger_peers_response_time_s_bucket[30m]))
+        by (goldpinger_instance, instance, le)) > 0.5
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        description: |
+          Goldpinger instance {{ $labels.goldpinger_instance }} {{ $labels.instance }} peer response p99 > 500ms
+        summary: Instance {{ $labels.goldpinger_instance }} response p99 > 500ms
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+service:
+  type: ClusterIP
+  port: 8080
+
+updateStrategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxUnavailable: "50%"
+
+resources: {}
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+tolerations:
+  - key: node-role.kubernetes.io/master
+    effect: NoSchedule
+
+priorityClassName: system-node-critical
+
+## Install Default RBAC roles and bindings
+rbac:
+  # Specifies whether RBAC resources should be created
+  create: true
+
+goldpinger:
+  host_to_resolve: "www.google.com"
+  ping_number: 0
+  # display nodename in UI, default is false
+  display_nodename: false
