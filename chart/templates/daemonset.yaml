@@ -14,9 +14,10 @@ spec:
   {{- end }}
   template:
     metadata:
-      {{- with .Values.podAnnotations }}
+      {{- if and .Values.serviceMonitor.create (not (.Capabilities.APIVersions.Has "monitoring.coreos.com/v1")) }}
       annotations:
-        {{- toYaml . | nindent 8 }}
+        prometheus.io/port: "8080"
+        prometheus.io/scrape: "true"
       {{- end }}
       labels:
         {{- include "goldpinger.selectorLabels" . | nindent 8 }}

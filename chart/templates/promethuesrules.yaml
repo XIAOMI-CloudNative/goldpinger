@@ -1,3 +1,4 @@
+{{- if .Capabilities.APIVersions.Has "monitoring.coreos.com/v1" -}}
 {{- if .Values.serviceMonitor.create -}}
 {{- if .Values.prometheusRule.create -}}
 apiVersion: monitoring.coreos.com/v1
@@ -15,7 +16,6 @@ spec:
   groups:
   - name: goldpinger-alerts
     rules: {{- toYaml .Values.prometheusRule.rules | nindent 4 }}
-{{- end }}
-{{- end }}
-
-
+{{- end -}}
+{{- end -}}
+{{- end -}}

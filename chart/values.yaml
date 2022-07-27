@@ -50,10 +50,6 @@ prometheusRule:
           Goldpinger instance {{ $labels.goldpinger_instance }} {{ $labels.instance }} peer response p99 > 500ms
         summary: Instance {{ $labels.goldpinger_instance }} response p99 > 500ms
 
-podAnnotations: {}
-
-serviceAnnotations: {}
-
 podSecurityContext: {}
   # fsGroup: 2000
 
@@ -67,7 +63,7 @@ securityContext:
   # runAsUser: 1000
 
 service:
-  type: LoadBalancer
+  type: ClusterIP
   port: 8080
 
 updateStrategy:

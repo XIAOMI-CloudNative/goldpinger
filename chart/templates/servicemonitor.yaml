@@ -1,3 +1,4 @@
+{{- if .Capabilities.APIVersions.Has "monitoring.coreos.com/v1" -}}
 {{- if .Values.serviceMonitor.create -}}
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
@@ -21,6 +22,7 @@ spec:
   selector:
     matchLabels:
       {{- include "goldpinger.envSelectorLabels" . | nindent 6 }}
-{{- end }}
+{{- end -}}
+{{- end -}}
 
 
